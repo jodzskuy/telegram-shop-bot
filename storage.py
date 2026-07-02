@@ -384,16 +384,19 @@ def is_force_sub_ok(uid) -> bool:
     return data.get(str(uid), {}).get("force_sub_ok", False)
 
 
-def register_user(uid, username=None, name=None) -> None:
-    """Catat pengguna (deteksi customer) agar terhitung di statistik."""
+def register_user(uid, username=None, name=None) -> bool:
+    """Catat pengguna (deteksi customer) agar terhitung di statistik.
+    Return True jika user baru (baru pertama kali tercatat)."""
     with _lock:
         data = _read_users()
         rec = data.setdefault(str(uid), {})
+        was_new = not rec
         if username:
             rec["username"] = username
         if name:
             rec["name"] = name
         _write_users(data)
+    return was_new
 
 
 def registered_count() -> int:

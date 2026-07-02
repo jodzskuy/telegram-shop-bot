@@ -223,9 +223,19 @@ def build_items(cart):
 async def start(update, context):
     u = update.effective_user
     uid = u.id
-    # Deteksi/registrasi customer (agar terhitung di "User Terdaftar").
-    storage.register_user(uid, username=u.username, name=u.full_name)
-    # Force subscribe check — SEBELUM apa pun, termasuk milih bahasa
+    # Deteksi/registrasi customer
+    was_new = storage.register_user(uid, username=u.username, name=u.full_name)
+    # Kirim notif ke admin kalo user baru
+    if was_new and ADMIN_ID:
+        name_display = f"@{u.username}" if u.username else u.full_name
+        try:
+            await context.bot.send_message(
+                ADMIN_ID,
+                f"✅ {name_display} telah join bot!",
+            )
+        except Exception:
+            pass
+    # Force subscribe check
     if not await check_sub_and_block(update, context):
         return
     if not storage.is_lang_set(uid):
