@@ -77,20 +77,23 @@ def order_status(oid):
 def settings_view():
     if not cek(): return redirect(url_for("login"))
     if request.method == "POST":
-        rate = "".join(c for c in request.form.get("idr_per_usd","") if c.isdigit())
-        storage.update_settings({
-            "store_name": request.form.get("store_name","").strip(),
-            "currency_id": request.form.get("currency_id","Rp").strip() or "Rp",
-            "currency_en": request.form.get("currency_en","$").strip() or "$",
-            "idr_per_usd": int(rate) if rate else 16000,
-            "welcome_en": request.form.get("welcome_en",""),
-            "welcome_id": request.form.get("welcome_id",""),
-            "payment_info_en": request.form.get("payment_info_en",""),
-            "payment_info_id": request.form.get("payment_info_id",""),
-            "sos_intro_en": request.form.get("sos_intro_en",""),
-            "sos_intro_id": request.form.get("sos_intro_id",""),
-        })
-        return redirect(url_for("settings_view", token=TOKEN))
+        try:
+            rate = "".join(c for c in request.form.get("idr_per_usd","") if c.isdigit())
+            storage.update_settings({
+                "store_name": request.form.get("store_name","").strip(),
+                "currency_id": request.form.get("currency_id","Rp").strip() or "Rp",
+                "currency_en": request.form.get("currency_en","$").strip() or "$",
+                "idr_per_usd": int(rate) if rate else 16000,
+                "welcome_en": request.form.get("welcome_en",""),
+                "welcome_id": request.form.get("welcome_id",""),
+                "payment_info_en": request.form.get("payment_info_en",""),
+                "payment_info_id": request.form.get("payment_info_id",""),
+                "sos_intro_en": request.form.get("sos_intro_en",""),
+                "sos_intro_id": request.form.get("sos_intro_id",""),
+            })
+            return redirect(url_for("settings_view", token=TOKEN))
+        except Exception as e:
+            return f"ERROR: {e}", 500
     return render_template("settings.html", store_name=storage.get_settings()["store_name"],
                            active="settings", s=storage.get_settings(), token=TOKEN)
 
