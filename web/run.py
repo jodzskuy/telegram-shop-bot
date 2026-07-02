@@ -6,4 +6,4 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from web import app as web_app
 
 port = int(os.getenv("PORT", 5000))
-web_app.app.run(host="0.0.0.0", port=port)
+web_app.app.run(host="0.0.0.0", port=port, threaded=True)
