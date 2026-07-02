@@ -1,2 +1,2 @@
-web: gunicorn web.app:app --bind 0.0.0.0:$PORT --workers 1 --timeout 60
+web: python web/run.py
 bot: python bot.py
