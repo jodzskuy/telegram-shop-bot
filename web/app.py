@@ -110,5 +110,4 @@ app.jinja_env.filters["rupiah"] = rupiah
 if __name__ == "__main__":
     import os
     port = int(os.getenv("PORT", 5000))
-    from waitress import serve
-    serve(app, host="0.0.0.0", port=port)
+    app.run(host="0.0.0.0", port=port)
