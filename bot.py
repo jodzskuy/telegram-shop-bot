@@ -39,7 +39,6 @@ SOS_MSG = 10
 AP_NAME, AP_DESC, AP_PHOTO, AP_PRICE, AP_CONFIRM = range(20, 25)
 PROOF = 30
 FULFILL = 40
-EDIT_STOCK = 50
 
 SOS_MAX_PER_WINDOW = 3
 SOS_WINDOW_SECONDS = 900
@@ -559,12 +558,43 @@ async def router(update, context):
         if is_admin(update):
             pid = int(data.split(":")[1])
             context.user_data["edit_stock_pid"] = pid
+            context.user_data["edit_stock_msg_id"] = q.message.message_id
             p = storage.get_product(pid)
-            await q.edit_message_text(t(lang, "stock_prompt", name=p['name'], stok=p.get("stock",0)))
-            return "EDIT_STOCK"
+            await q.edit_message_text(f"Stok saat ini *{p['name']}*: {p.get('stock',0)}\n\nKetik jumlah stok baru (angka):", parse_mode="Markdown")
+            return  # JANGAN return state, handle via flag di user_data
 
 
 # --------------------------------------------------------------- SOS
+
+
+async def stock_message_handler(update, context):
+    """Handle stock edit input — triggered when edit_stock_pid flag is set."""
+    pid = context.user_data.pop("edit_stock_pid", None)
+    if not pid:
+        return  # not in stock mode, skip
+    if update.callback_query:
+        await update.callback_query.answer()
+    uid = update.effective_user.id
+    if uid != int(os.getenv("ADMIN_ID", "0")):
+        await update.message.reply_text("Khusus admin.")
+        return
+    lang = lang_of(update)
+    digits = "".join(c for c in update.message.text if c.isdigit())
+    if not digits:
+        await update.message.reply_text("Masukkan angka saja (jumlah stok).")
+        # reset flag
+        context.user_data["edit_stock_pid"] = pid
+        return
+    stok_baru = int(digits)
+    p = storage.get_product(pid)
+    if p:
+        storage.update_product(pid, {"stock": stok_baru})
+        await update.message.reply_text(f"Stok *{p['name']}* diubah jadi: {stok_baru}", parse_mode="Markdown")
+    else:
+        await update.message.reply_text("Produk tidak ditemukan.")
+    context.user_data.pop("edit_stock_msg_id", None)
+
+
 async def sos_start(update, context):
     lang = lang_of(update)
     s = storage.get_settings()
@@ -771,17 +801,11 @@ def build_app():
         fallbacks=common_fallbacks,
         allow_reentry=True,
     )
-    stock_conv = ConversationHandler(
-        entry_points=[CallbackQueryHandler(router, pattern="^stock_edit:")],
-        states={EDIT_STOCK: [MessageHandler(filters.TEXT & ~filters.COMMAND, stock_edit_handler)]},
-        fallbacks=common_fallbacks,
-        allow_reentry=True,
-    )
     app.add_handler(sos_conv)
     app.add_handler(proof_conv)
     app.add_handler(fulfill_conv)
     app.add_handler(addproduct_conv)
-    app.add_handler(stock_conv)
+    app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, stock_message_handler))
     app.add_handler(CommandHandler("start", start))
     app.add_handler(CommandHandler("menu", menu_cmd))
     app.add_handler(CommandHandler("language", language_cmd))
