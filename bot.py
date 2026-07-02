@@ -330,12 +330,12 @@ async def show_checkout(q, context, lang):
     s = storage.get_settings()
     pay = s["payment_info_id"] if lang == "id" else s["payment_info_en"]
     text = (f"{t(lang, 'checkout_title')}\n" + body + f"\n{t(lang, 'total')}: {price(total, lang)}\n\n"
-            f"{t(lang, 'payment')}\n" + pay)
+            f"{t(lang, 'payment')}\n" + _esc(pay))
     rows = [
         [InlineKeyboardButton(t(lang, "btn_paid"), callback_data="pay_done")],
         [InlineKeyboardButton(t(lang, "btn_back"), callback_data="cart")],
     ]
-    await q.edit_message_text(text, reply_markup=InlineKeyboardMarkup(rows))
+    await q.edit_message_text(text, reply_markup=InlineKeyboardMarkup(rows), parse_mode="HTML")
 
 
 # --------------------------------------------------- bukti pembayaran (proof)
@@ -525,12 +525,12 @@ async def sos_start(update, context):
     lang = lang_of(update)
     s = storage.get_settings()
     intro = s["sos_intro_id"] if lang == "id" else s["sos_intro_en"]
-    text = f"{t(lang, 'sos_title')}\n{intro}"
+    text = f"{t(lang, 'sos_title')}\n{_esc(intro)}"
     if update.callback_query:
         await update.callback_query.answer()
-        await update.callback_query.edit_message_text(text)
+        await update.callback_query.edit_message_text(text, parse_mode="HTML")
     else:
-        await update.message.reply_text(text)
+        await update.message.reply_text(text, parse_mode="HTML")
     return SOS_MSG
 
 
