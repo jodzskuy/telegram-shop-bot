@@ -9,7 +9,7 @@ import storage
 
 load_dotenv(os.path.join(ROOT, ".env"))
 PASS = os.getenv("ADMIN_WEB_PASSWORD", "admin123")
-TOKEN = "rahasia123"
+TOKEN = os.getenv("WEB_TOKEN", "rahasia123")
 
 app = Flask(__name__)
 
@@ -108,5 +108,7 @@ def rupiah(v):
 app.jinja_env.filters["rupiah"] = rupiah
 
 if __name__ == "__main__":
+    import os
+    port = int(os.getenv("PORT", 5000))
     from waitress import serve
-    serve(app, host="127.0.0.1", port=5003)
+    serve(app, host="0.0.0.0", port=port)
