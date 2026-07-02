@@ -1,2 +1,2 @@
-web: python web/run.py
+web: python web/server.py
 bot: python bot.py
