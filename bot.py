@@ -274,7 +274,7 @@ async def show_products_all(q, lang):
         stok = p.get("stock", 0)
         if stok == 0:
             continue  # skip sold out
-        label = p['name']
+        label = f"{p['name']} — {price(p['price'], lang)} (Stok: {stok})"
         btns.append(InlineKeyboardButton(label, callback_data=f"prod:{p['id']}"))
     rows = _grid(btns, 2) if btns else []
     if not rows:
