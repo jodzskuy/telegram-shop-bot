@@ -1,0 +1,8 @@
+.env
+__pycache__/
+flask_session/
+*.pyc
+orders.json
+users.json
+data.json
+settings.json

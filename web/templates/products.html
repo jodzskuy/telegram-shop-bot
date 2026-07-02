@@ -1,0 +1,37 @@
+{% extends "base.html" %}
+{% block content %}
+<h1>Kelola Produk</h1>
+<form class="addbar" method="post" action="{{ url_for('products_add', token=token) }}">
+<div><label>Nama</label><input name="name" required></div>
+<div><label>Deskripsi</label><input name="description"></div>
+<div><label>Kategori</label><input name="category" value="Umum"></div>
+<div><label>Harga</label><input name="price" placeholder="50000"></div>
+<div><label>URL Gambar (PNG/JPG)</label><input name="photo_url" placeholder="https://.../logo.png"></div>
+<div><button>➕ Tambah</button></div>
+</form>
+<p class="muted" style="margin:6px 2px 14px;">💡 Tempel URL gambar (PNG/JPG) — gambar akan otomatis tampil di bot Telegram saat produk dibuka. Ubah lalu klik 💾 untuk menyimpan; bot langsung ikut berubah.</p>
+{% for p in products %}
+<form id="edit-{{ p.id }}" method="post" action="{{ url_for('products_edit', product_id=p.id, token=token) }}"></form>
+{% endfor %}
+<div class="card"><div style="overflow-x:auto;"><table>
+<thead><tr><th>#</th><th>Gambar</th><th>Nama</th><th>Kategori</th><th>Harga</th><th>Deskripsi</th><th>URL Gambar (PNG/JPG)</th><th></th></tr></thead>
+<tbody>
+{% for p in products %}
+<tr>
+<td>{{ p.id }}</td>
+<td>{% if p.photo_url %}<img src="{{ p.photo_url }}" alt="" style="width:42px;height:42px;object-fit:cover;border-radius:8px;border:1px solid #e3e8ee;">{% else %}<span class="muted">—</span>{% endif %}</td>
+<td><input form="edit-{{ p.id }}" name="name" value="{{ p.name }}" style="min-width:120px;"></td>
+<td><input form="edit-{{ p.id }}" name="category" value="{{ p.category }}" style="width:100px;"></td>
+<td><input form="edit-{{ p.id }}" name="price" value="{{ p.price }}" style="width:90px;"></td>
+<td><input form="edit-{{ p.id }}" name="description" data-col="desc" value="{{ p.description }}" style="min-width:160px;"></td>
+<td><input form="edit-{{ p.id }}" name="photo_url" value="{{ p.photo_url or '' }}" placeholder="https://.../img.png" style="min-width:140px;"></td>
+<td style="white-space:nowrap;">
+<button form="edit-{{ p.id }}" title="Simpan">💾</button>
+<form method="post" action="{{ url_for('products_delete', product_id=p.id, token=token) }}" style="display:inline;" onsubmit="return confirm('Hapus produk ini?');"><button class="ghost" title="Hapus">🗑️</button></form>
+</td>
+</tr>
+{% else %}
+<tr><td colspan="8" class="muted" style="text-align:center;padding:24px;">Belum ada produk.</td></tr>
+{% endfor %}
+</tbody></table></div></div>
+{% endblock %}

@@ -1,0 +1,46 @@
+{% extends "base.html" %}
+{% block content %}
+<h1>Tampilan Bot &amp; Bahasa</h1>
+<p class="muted" style="margin-top:-8px;margin-bottom:18px;">Atur teks bot dalam 2 bahasa (English default + Indonesia) dan mata uang. Perubahan langsung dipakai bot tanpa restart. Mata uang mengikuti bahasa pelanggan secara otomatis.</p>
+<form method="post" action="{{ url_for('settings_view', token=token) }}" class="card" style="padding:20px;display:grid;gap:18px;">
+
+<div><label>Nama Toko</label><input name="store_name" value="{{ s.store_name }}"></div>
+
+<fieldset style="border:1px solid var(--border);border-radius:10px;padding:14px;">
+<legend class="muted" style="padding:0 6px;">Mata Uang (otomatis mengikuti bahasa)</legend>
+<div style="display:grid;grid-template-columns:1fr 1fr 1.4fr;gap:12px;">
+<div><label>Simbol 🇮🇩 Indonesia</label><input name="currency_id" value="{{ s.currency_id }}"></div>
+<div><label>Simbol 🇬🇧 English</label><input name="currency_en" value="{{ s.currency_en }}"></div>
+<div><label>Kurs: 1 USD = ... Rupiah</label><input name="idr_per_usd" value="{{ s.idr_per_usd }}"></div>
+</div>
+<p class="muted" style="margin:10px 0 0;">Harga produk diisi dalam Rupiah. Saat pelanggan memakai English, harga otomatis dikonversi ke USD memakai kurs ini.</p>
+</fieldset>
+
+<fieldset style="border:1px solid var(--border);border-radius:10px;padding:14px;">
+<legend class="muted" style="padding:0 6px;">Pesan Sambutan /start (pakai {store} untuk nama toko)</legend>
+<div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
+<div><label>🇬🇧 English</label><textarea name="welcome_en" rows="3">{{ s.welcome_en }}</textarea></div>
+<div><label>🇮🇩 Indonesia</label><textarea name="welcome_id" rows="3">{{ s.welcome_id }}</textarea></div>
+</div>
+</fieldset>
+
+<fieldset style="border:1px solid var(--border);border-radius:10px;padding:14px;">
+<legend class="muted" style="padding:0 6px;">Detail Pembayaran (tampil saat checkout)</legend>
+<div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
+<div><label>🇬🇧 English</label><textarea name="payment_info_en" rows="6">{{ s.payment_info_en }}</textarea></div>
+<div><label>🇮🇩 Indonesia</label><textarea name="payment_info_id" rows="6">{{ s.payment_info_id }}</textarea></div>
+</div>
+</fieldset>
+
+<fieldset style="border:1px solid var(--border);border-radius:10px;padding:14px;">
+<legend class="muted" style="padding:0 6px;">Teks Pembuka Bantuan / SOS</legend>
+<div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
+<div><label>🇬🇧 English</label><textarea name="sos_intro_en" rows="2">{{ s.sos_intro_en }}</textarea></div>
+<div><label>🇮🇩 Indonesia</label><textarea name="sos_intro_id" rows="2">{{ s.sos_intro_id }}</textarea></div>
+</div>
+</fieldset>
+
+<div><button>Simpan Perubahan</button></div>
+<input type="hidden" name="token" value="{{ token }}">
+</form>
+{% endblock %}

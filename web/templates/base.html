@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>{{ store_name }} — Admin</title>
+{% block head %}{% endblock %}
+<style>
+:root{--blue:#2f7bd6;--bg:#f4f6f9;--card:#fff;--border:#e4e8ee;--text:#1d2733;--muted:#6b7684;}
+*{box-sizing:border-box;}body{margin:0;font-family:-apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif;background:var(--bg);color:var(--text);}
+.topbar{background:#fff;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;padding:12px 22px;position:sticky;top:0;z-index:5;}
+.brand{font-weight:700;font-size:17px;}.brand span{background:var(--blue);color:#fff;font-size:11px;padding:2px 8px;border-radius:20px;margin-left:6px;}
+nav a{margin-left:8px;text-decoration:none;color:var(--muted);font-weight:600;font-size:14px;padding:6px 12px;border-radius:8px;}
+nav a.active{color:var(--blue);background:#eaf2fc;}
+main{max-width:1040px;margin:24px auto;padding:0 18px;}
+.flash{background:#eaf2fc;border:1px solid #c9def7;color:#1d4e89;padding:10px 14px;border-radius:10px;margin-bottom:16px;font-size:14px;}
+h1{font-size:22px;margin:0 0 18px;}
+label{font-size:12px;color:var(--muted);display:block;margin-bottom:4px;font-weight:600;}
+.stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:12px;margin-bottom:22px;}
+.stat{background:var(--card);border:1px solid var(--border);border-radius:12px;padding:14px 16px;}
+.stat .n{font-size:26px;font-weight:700;}.stat .l{font-size:12px;color:var(--muted);text-transform:uppercase;letter-spacing:.04em;}
+.card{background:var(--card);border:1px solid var(--border);border-radius:12px;overflow:hidden;}
+table{width:100%;border-collapse:collapse;font-size:14px;}
+th,td{text-align:left;padding:12px 14px;border-bottom:1px solid var(--border);vertical-align:top;}
+th{background:#fafbfc;font-size:12px;color:var(--muted);text-transform:uppercase;letter-spacing:.03em;}
+tr:last-child td{border-bottom:none;}
+.badge{display:inline-block;padding:3px 10px;border-radius:20px;font-size:12px;font-weight:700;}
+.badge.Baru{background:#fdecea;color:#c0392b;}.badge.Diproses{background:#fff4e0;color:#b9770e;}.badge.Selesai{background:#e7f6ec;color:#1e8e4e;}.badge.Batal{background:#eceff2;color:#6b7684;}
+select,input,textarea{font:inherit;padding:8px 10px;border:1px solid var(--border);border-radius:8px;width:100%;}
+textarea{resize:vertical;}
+button{font:inherit;font-weight:600;background:var(--blue);color:#fff;border:none;padding:9px 16px;border-radius:8px;cursor:pointer;}
+button.ghost{background:#fff;color:#c0392b;border:1px solid var(--border);}
+pre,code,.mono{font-family:'Cascadia Code','Fira Code','Consolas','Courier New',monospace;font-size:13px;}
+pre{background:#f8f9fb;border:1px solid var(--border);border-radius:8px;padding:12px;overflow-x:auto;white-space:pre-wrap;word-break:break-word;}
+.bold{font-weight:700;}
+.status-form{display:flex;gap:6px;align-items:center;}.status-form select{width:auto;}
+.muted{color:var(--muted);font-size:13px;font-weight:400;}
+.addbar{display:grid;grid-template-columns:1.2fr 2fr .9fr .9fr auto;gap:8px;align-items:end;background:var(--card);border:1px solid var(--border);border-radius:12px;padding:14px;margin-bottom:18px;}
+</style>
+</head>
+<body>
+<header class="topbar">
+<div class="brand">🛍️ {{ store_name }} <span>ADMIN</span></div>
+<nav>
+<a href="{{ url_for('home', token=token) }}" class="{% if active=='orders' %}active{% endif %}">Pesanan</a>
+<a href="{{ url_for('products', token=token) }}" class="{% if active=='products' %}active{% endif %}">Produk</a>
+<a href="{{ url_for('settings_view', token=token) }}" class="{% if active=='settings' %}active{% endif %}">Tampilan Bot</a>
+<a href="{{ url_for('logout') }}">Keluar</a>
+</nav>
+</header>
+<main>
+{% block content %}{% endblock %}
+</main>
+</body>
+</html>

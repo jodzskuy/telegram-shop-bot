@@ -1,0 +1,31 @@
+{% extends "base.html" %}
+{% block head %}<meta http-equiv="refresh" content="20">{% endblock %}
+{% block content %}
+<h1>Pesanan Masuk <span class="muted">— refresh otomatis tiap 20 detik</span></h1>
+<div class="stats">
+<div class="stat"><div class="n">{{ counts.Total }}</div><div class="l">Total</div></div>
+<div class="stat"><div class="n">{{ counts.Diproses }}</div><div class="l">Diproses</div></div>
+<div class="stat"><div class="n">{{ counts.Selesai }}</div><div class="l">Selesai</div></div>
+<div class="stat"><div class="n">{{ counts.Baru }}</div><div class="l">Baru</div></div>
+<div class="stat"><div class="n">{{ bot_stats.sold_pcs }}</div><div class="l">Terjual (pcs)</div></div>
+<div class="stat"><div class="n">{{ bot_stats.registered_users }}</div><div class="l">User Terdaftar</div></div>
+</div>
+<div class="card"><table>
+<thead><tr><th>#</th><th>Waktu</th><th>Pelanggan</th><th>Item</th><th>Total</th><th>Bukti / Detail</th><th>Status</th><th>Ubah</th></tr></thead>
+<tbody>
+{% for o in orders %}
+<tr>
+<td><strong>#{{ o.id }}</strong></td>
+<td class="muted">{{ o.created_at[:16] | replace('T',' ') }}</td>
+<td><strong>{{ o.customer_name }}</strong><br><span class="muted">Telegram: {{ o.telegram_name }}</span></td>
+<td>{% for it in o.items %}{{ it.qty }}× {{ it.name }}{% if not loop.last %}<br>{% endif %}{% endfor %}</td>
+<td><strong>{{ o.total | rupiah }}</strong></td>
+<td class="muted">{% if o.proof_text %}🧾 {{ o.proof_text }}{% if o.proof_photo_file_id %} 📎{% endif %}{% else %}—{% endif %}{% if o.delivery_details %}<br>📦 {{ o.delivery_details }}{% endif %}</td>
+<td><span class="badge {{ o.status }}">{{ o.status }}</span></td>
+<td><form class="status-form" method="post" action="{{ url_for('order_status', order_id=o.id, token=token) }}"><select name="status">{% for s in statuses %}<option value="{{ s }}" {% if o.status==s %}selected{% endif %}>{{ s }}</option>{% endfor %}</select><button>Simpan</button></form></td>
+</tr>
+{% else %}
+<tr><td colspan="8" class="muted" style="padding:26px;text-align:center;">Belum ada pesanan. Pesanan dari Telegram akan muncul di sini.</td></tr>
+{% endfor %}
+</tbody></table></div>
+{% endblock %}
