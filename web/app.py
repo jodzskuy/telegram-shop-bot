@@ -37,8 +37,11 @@ def logout():
 @app.route("/products")
 def products():
     if not cek(): return redirect(url_for("login"))
-    return render_template("products.html", store_name=storage.get_settings()["store_name"], active="products",
-                           products=storage.list_products(), token=TOKEN)
+    try:
+        return render_template("products.html", store_name=storage.get_settings()["store_name"], active="products",
+                               products=storage.list_products(), token=TOKEN)
+    except Exception as e:
+        return f"ERROR products: {e}", 500
 
 @app.route("/products/add", methods=["POST"])
 def products_add():
