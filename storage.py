@@ -115,6 +115,7 @@ def add_product(
             "name": name,
             "category": category,
             "price": price,
+            "stock": 999,
             "description": description,
             "photo_file_id": photo_file_id,
             "photo_url": photo_url,
@@ -125,8 +126,8 @@ def add_product(
 
 
 def update_product(product_id: int, fields: dict) -> bool:
-    """Perbarui field produk dari web (nama, kategori, harga, deskripsi, gambar)."""
-    allowed = {"name", "category", "price", "description", "photo_url", "photo_file_id"}
+    """Perbarui field produk dari web (nama, kategori, harga, deskripsi, gambar, stok)."""
+    allowed = {"name", "category", "price", "stock", "description", "photo_url", "photo_file_id"}
     with _lock:
         data = _read()
         changed = False

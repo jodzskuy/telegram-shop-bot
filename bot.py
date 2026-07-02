@@ -39,6 +39,7 @@ SOS_MSG = 10
 AP_NAME, AP_DESC, AP_PHOTO, AP_PRICE, AP_CONFIRM = range(20, 25)
 PROOF = 30
 FULFILL = 40
+EDIT_STOCK = 50
 
 SOS_MAX_PER_WINDOW = 3
 SOS_WINDOW_SECONDS = 900
@@ -185,6 +186,7 @@ def lang_keyboard():
 def admin_keyboard(lang):
     return InlineKeyboardMarkup([
         [InlineKeyboardButton(t(lang, "btn_add_product"), callback_data="ap_add")],
+        [InlineKeyboardButton(t(lang, "btn_stock"), callback_data="stock_menu")],
         [InlineKeyboardButton(t(lang, "btn_del_product"), callback_data="del_menu")],
         [InlineKeyboardButton(t(lang, "btn_catalog"), callback_data="catalog")],
         [InlineKeyboardButton(t(lang, "btn_back_menu"), callback_data="menu")],
@@ -266,6 +268,23 @@ async def show_categories(q, lang):
     await q.edit_message_text(t(lang, "choose_category"), reply_markup=InlineKeyboardMarkup(rows))
 
 
+async def show_products_all(q, lang):
+    """Tampilkan semua produk langsung tanpa kategori."""
+    btns = []
+    for p in storage.list_products():
+        stok = p.get("stock", 0)
+        if stok == 0:
+            continue  # skip sold out
+        label = p['name']
+        btns.append(InlineKeyboardButton(label, callback_data=f"prod:{p['id']}"))
+    rows = _grid(btns, 2) if btns else []
+    if not rows:
+        await q.edit_message_text(t(lang, "empty"), reply_markup=InlineKeyboardMarkup([[InlineKeyboardButton(t(lang, "btn_back_menu"), callback_data="menu")]]))
+        return
+    rows.append([InlineKeyboardButton(t(lang, "btn_back_menu"), callback_data="menu")])
+    await q.edit_message_text(t(lang, "choose_product"), reply_markup=InlineKeyboardMarkup(rows))
+
+
 async def show_products(q, cat, lang):
     btns = [InlineKeyboardButton(p['name'], callback_data=f"prod:{p['id']}") for p in storage.list_products(cat)]
     rows = _grid(btns, 2)
@@ -278,12 +297,16 @@ async def show_product(q, pid, lang):
     if not p:
         await q.edit_message_text(t(lang, "product_not_found"))
         return
-    text = f"{p['name']}\n\n{p['description']}\n\n{t(lang, 'price')}: {price(p['price'], lang)}"
-    rows = [
-        [InlineKeyboardButton(t(lang, "btn_buy"), callback_data=f"add:{p['id']}")],
-        [InlineKeyboardButton(t(lang, "btn_view_cart"), callback_data="cart")],
-        [InlineKeyboardButton(t(lang, "btn_back"), callback_data=f"cat:{p['category']}")],
-    ]
+    stok = p.get("stock", 0)
+    stok_label = "Stok: " + ("Habis" if stok <= 0 else str(stok))
+    text = f"{p['name']}\n\n{p['description']}\n\n{t(lang, 'price')}: {price(p['price'], lang)}\n{stok_label}"
+    rows = []
+    if stok > 0:
+        rows.append([InlineKeyboardButton(t(lang, "btn_buy"), callback_data=f"add:{p['id']}")])
+    else:
+        rows.append([InlineKeyboardButton("Habis", callback_data="noop")])
+    rows.append([InlineKeyboardButton(t(lang, "btn_view_cart"), callback_data="cart")])
+    rows.append([InlineKeyboardButton(t(lang, "btn_back"), callback_data="browse")])
     kb = InlineKeyboardMarkup(rows)
     img = p.get("photo_url") or p.get("photo_file_id")
     if img:
@@ -454,9 +477,20 @@ async def show_admin(q, update, lang):
 
 
 async def show_delete_menu(q, lang):
-    rows = [[InlineKeyboardButton(f"\U0001F5D1\uFE0F {p['name']}", callback_data=f"del:{p['id']}")] for p in storage.list_products()]
+    rows = [[InlineKeyboardButton(f"\U0001F5D1\uFE0F {p['name']} (stok: {p.get('stock',0)})", callback_data=f"del:{p['id']}")] for p in storage.list_products()]
     rows.append([InlineKeyboardButton(t(lang, "btn_back"), callback_data="admin")])
     await q.edit_message_text(t(lang, "choose_delete"), reply_markup=InlineKeyboardMarkup(rows))
+
+
+async def show_stock_menu(q, update, lang):
+    """Tampilkan daftar produk dengan stok, admin bisa edit."""
+    rows = []
+    for p in storage.list_products():
+        stok = p.get("stock", 0)
+        label = f"{p['name']} — Stok: {stok}"
+        rows.append([InlineKeyboardButton(label, callback_data=f"stock_edit:{p['id']}")])
+    rows.append([InlineKeyboardButton(t(lang, "btn_back"), callback_data="admin")])
+    await q.edit_message_text("Edit Stok Produk:\nPilih produk untuk ubah stok.", reply_markup=InlineKeyboardMarkup(rows))
 
 
 async def router(update, context):
@@ -490,7 +524,7 @@ async def router(update, context):
         storage.set_user_lang(update.effective_user.id, newlang)
         await q.edit_message_text(home_text(update, newlang), reply_markup=menu_keyboard(update, newlang), parse_mode="HTML")
     elif data == "browse":
-        await show_categories(q, lang)
+        await show_products_all(q, lang)
     elif data.startswith("cat:"):
         await show_products(q, data[4:], lang)
     elif data.startswith("prod:"):
@@ -518,6 +552,16 @@ async def router(update, context):
             if p:
                 await q.answer(t(lang, "deleted", name=p['name']))
             await show_delete_menu(q, lang)
+    elif data == "stock_menu":
+        if is_admin(update):
+            await show_stock_menu(q, update, lang)
+    elif data.startswith("stock_edit:"):
+        if is_admin(update):
+            pid = int(data.split(":")[1])
+            context.user_data["edit_stock_pid"] = pid
+            p = storage.get_product(pid)
+            await q.edit_message_text(t(lang, "stock_prompt", name=p['name'], stok=p.get("stock",0)))
+            return "EDIT_STOCK"
 
 
 # --------------------------------------------------------------- SOS
@@ -638,6 +682,28 @@ async def ap_cancel(update, context):
     return ConversationHandler.END
 
 
+async def stock_edit_handler(update, context):
+    """Terima input stok baru dari admin."""
+    lang = lang_of(update)
+    pid = context.user_data.get("edit_stock_pid")
+    if not pid:
+        await update.message.reply_text("Error: produk tidak ditemukan.")
+        return ConversationHandler.END
+    digits = "".join(c for c in update.message.text if c.isdigit())
+    if not digits:
+        await update.message.reply_text("Masukkan angka saja (jumlah stok).")
+        return "EDIT_STOCK"
+    stok_baru = int(digits)
+    p = storage.get_product(pid)
+    if p:
+        storage.update_product(pid, {"stock": stok_baru})
+        await update.message.reply_text(f"Stok *{p['name']}* diubah jadi: {stok_baru}", parse_mode="Markdown")
+    else:
+        await update.message.reply_text("Produk tidak ditemukan.")
+    await update.message.reply_text(t(lang, "admin_title"), reply_markup=admin_keyboard(lang))
+    return ConversationHandler.END
+
+
 async def cancel_conv(update, context):
     lang = lang_of(update)
     context.user_data.pop("fulfill_id", None)
@@ -705,10 +771,17 @@ def build_app():
         fallbacks=common_fallbacks,
         allow_reentry=True,
     )
+    stock_conv = ConversationHandler(
+        entry_points=[CallbackQueryHandler(router, pattern="^stock_edit:")],
+        states={EDIT_STOCK: [MessageHandler(filters.TEXT & ~filters.COMMAND, stock_edit_handler)]},
+        fallbacks=common_fallbacks,
+        allow_reentry=True,
+    )
     app.add_handler(sos_conv)
     app.add_handler(proof_conv)
     app.add_handler(fulfill_conv)
     app.add_handler(addproduct_conv)
+    app.add_handler(stock_conv)
     app.add_handler(CommandHandler("start", start))
     app.add_handler(CommandHandler("menu", menu_cmd))
     app.add_handler(CommandHandler("language", language_cmd))

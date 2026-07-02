@@ -27,6 +27,7 @@ STRINGS = {
         "btn_add_product": "\u2795 Add Product",
         "btn_del_product": "\U0001F5D1\uFE0F Delete Product",
         "btn_catalog": "\U0001F4CB View Catalog",
+        "btn_stock": "\U0001F4E6 Stock",
         "btn_skip_image": "Skip image",
         "btn_save": "\u2705 Save",
         "btn_cancel": "\u274C Cancel",
@@ -34,6 +35,7 @@ STRINGS = {
         # ---- pesan umum ----
         "choose_lang": "\U0001F310 Please choose your language:",
         "choose_category": "Choose a product category:",
+        "choose_product": "Choose a product:",
         "products_in": "Products in {cat}:",
         "product_not_found": "Product not found.",
         "price": "Price",
@@ -75,6 +77,7 @@ STRINGS = {
         "ap_price_invalid": "Price must be a number. Try again (e.g. 50000).",
         "ap_review": "Review product data:\n\nName: {name}\nDescription: {desc}\nImage: {img}\nPrice: {price}\n\nSave this product?",
         "ap_saved": "\u2705 Product {name} added successfully.",
+        "stock_prompt": "Current stock for *{name}*: {stok}\n\nEnter the new stock quantity (number):",
         "yes": "yes",
         "no": "no",
         # ---- force subscribe ----
@@ -103,6 +106,7 @@ STRINGS = {
         "btn_add_product": "\u2795 Tambah Produk",
         "btn_del_product": "\U0001F5D1\uFE0F Hapus Produk",
         "btn_catalog": "\U0001F4CB Lihat Katalog",
+        "btn_stock": "\U0001F4E6 Stok",
         "btn_skip_image": "Lewati gambar",
         "btn_save": "\u2705 Simpan",
         "btn_cancel": "\u274C Batal",
@@ -110,6 +114,7 @@ STRINGS = {
         # ---- pesan umum ----
         "choose_lang": "\U0001F310 Silakan pilih bahasa Anda:",
         "choose_category": "Pilih kategori produk:",
+        "choose_product": "Pilih produk:",
         "products_in": "Produk pada kategori {cat}:",
         "product_not_found": "Produk tidak ditemukan.",
         "price": "Harga",
@@ -151,6 +156,7 @@ STRINGS = {
         "ap_price_invalid": "Harga harus berupa angka. Coba lagi (contoh 50000).",
         "ap_review": "Periksa data produk:\n\nNama: {name}\nDeskripsi: {desc}\nGambar: {img}\nHarga: {price}\n\nSimpan produk ini?",
         "ap_saved": "\u2705 Produk {name} berhasil ditambahkan.",
+        "stock_prompt": "Stok saat ini *{name}*: {stok}\n\nMasukkan jumlah stok baru (angka):",
         "yes": "ada",
         "no": "tidak ada",
         # ---- force subscribe ----
