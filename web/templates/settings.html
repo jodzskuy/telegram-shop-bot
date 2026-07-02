@@ -2,7 +2,7 @@
 {% block content %}
 <h1>Tampilan Bot &amp; Bahasa</h1>
 <p class="muted" style="margin-top:-8px;margin-bottom:18px;">Atur teks bot dalam 2 bahasa (English default + Indonesia) dan mata uang. Perubahan langsung dipakai bot tanpa restart. Mata uang mengikuti bahasa pelanggan secara otomatis.</p>
-<form method="post" action="{{ url_for('settings_view', token=token) }}" class="card" style="padding:20px;display:grid;gap:18px;">
+<form method="post" action="/settings?token={{ token }}" class="card" style="padding:20px;display:grid;gap:18px;">
 
 <div><label>Nama Toko</label><input name="store_name" value="{{ s.store_name }}"></div>
 

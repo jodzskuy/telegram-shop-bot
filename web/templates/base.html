@@ -42,10 +42,10 @@ pre{background:#f8f9fb;border:1px solid var(--border);border-radius:8px;padding:
 <header class="topbar">
 <div class="brand">🛍️ {{ store_name }} <span>ADMIN</span></div>
 <nav>
-<a href="{{ url_for('home', token=token) }}" class="{% if active=='orders' %}active{% endif %}">Pesanan</a>
-<a href="{{ url_for('products', token=token) }}" class="{% if active=='products' %}active{% endif %}">Produk</a>
-<a href="{{ url_for('settings_view', token=token) }}" class="{% if active=='settings' %}active{% endif %}">Tampilan Bot</a>
-<a href="{{ url_for('logout') }}">Keluar</a>
+<a href="/?token={{ token }}" class="{% if active=='orders' %}active{% endif %}">Pesanan</a>
+<a href="/products?token={{ token }}" class="{% if active=='products' %}active{% endif %}">Produk</a>
+<a href="/settings?token={{ token }}" class="{% if active=='settings' %}active{% endif %}">Tampilan Bot</a>
+<a href="/login">Keluar</a>
 </nav>
 </header>
 <main>

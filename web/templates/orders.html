@@ -22,7 +22,7 @@
 <td><strong>{{ o.total | rupiah }}</strong></td>
 <td class="muted">{% if o.proof_text %}🧾 {{ o.proof_text }}{% if o.proof_photo_file_id %} 📎{% endif %}{% else %}—{% endif %}{% if o.delivery_details %}<br>📦 {{ o.delivery_details }}{% endif %}</td>
 <td><span class="badge {{ o.status }}">{{ o.status }}</span></td>
-<td><form class="status-form" method="post" action="{{ url_for('order_status', order_id=o.id, token=token) }}"><select name="status">{% for s in statuses %}<option value="{{ s }}" {% if o.status==s %}selected{% endif %}>{{ s }}</option>{% endfor %}</select><button>Simpan</button></form></td>
+<td><form class="status-form" method="post" action="/orders/status/{{ o.id }}?token={{ token }}"><select name="status">{% for s in statuses %}<option value="{{ s }}" {% if o.status==s %}selected{% endif %}>{{ s }}</option>{% endfor %}</select><button>Simpan</button></form></td>
 </tr>
 {% else %}
 <tr><td colspan="8" class="muted" style="padding:26px;text-align:center;">Belum ada pesanan. Pesanan dari Telegram akan muncul di sini.</td></tr>
