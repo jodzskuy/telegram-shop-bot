@@ -120,20 +120,18 @@ button:hover{filter:brightness(1.05);}
 
 TOOLBAR_JS = """<script>
 function esc(s){return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
-var ALLOWED=['b','strong','i','em','u','s','del','code','pre','tg-spoiler'];
 function pv(ta){
   var el=document.getElementById(ta.id+'_pv'); if(!el)return;
   var out=esc(ta.value);
-  ALLOWED.forEach(function(t){
-    out=out.replace(new RegExp('&lt;'+t+'&gt;','g'),'<'+t+'>')
-           .replace(new RegExp('&lt;/'+t+'&gt;','g'),'</'+t+'>');
-  });
+  out = out.replace(/\\*(.+?)\\*/g, '<b>$1</b>');
+  out = out.replace(/_(.+?)_/g, '<i>$1</i>');
+  out = out.replace(/`(.+?)`/g, '<code>$1</code>');
   el.innerHTML=out||'<span class="muted">(kosong)</span>';
 }
 document.querySelectorAll('.tbtn').forEach(function(btn){
   btn.addEventListener('click',function(){
     var ta=document.getElementById(btn.dataset.t);
-    var tag=btn.dataset.tag, open='<'+tag+'>', close='</'+tag+'>';
+    var open=btn.dataset.open, close=btn.dataset.close;
     var s=ta.selectionStart,e=ta.selectionEnd;
     var sel=ta.value.substring(s,e)||'teks';
     ta.value=ta.value.substring(0,s)+open+sel+close+ta.value.substring(e);
@@ -172,10 +170,9 @@ def field_textarea(name, value, rows):
     tid = "ta_" + name
     toolbar = (
         "<div class='toolbar'>"
-        "<button type='button' class='tbtn' data-t='" + tid + "' data-tag='b'>Bold</button>"
-        "<button type='button' class='tbtn' data-t='" + tid + "' data-tag='i'>Miring</button>"
-        "<button type='button' class='tbtn' data-t='" + tid + "' data-tag='code'>Mono / Salin</button>"
-        "<button type='button' class='tbtn' data-t='" + tid + "' data-tag='pre'>Blok kode</button>"
+        "<button type='button' class='tbtn' data-t='" + tid + "' data-open='*' data-close='*'>Bold</button>"
+        "<button type='button' class='tbtn' data-t='" + tid + "' data-open='_' data-close='_'>Miring</button>"
+        "<button type='button' class='tbtn' data-t='" + tid + "' data-open='`' data-close='`'>Mono</button>"
         "</div>"
     )
     return (toolbar +
