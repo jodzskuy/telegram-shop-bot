@@ -276,7 +276,7 @@ async def show_products_all(q, lang):
             continue  # skip sold out
         label = f"{p['name']} — {price(p['price'], lang)} (Stok: {stok})"
         btns.append(InlineKeyboardButton(label, callback_data=f"prod:{p['id']}"))
-    rows = _grid(btns, 2) if btns else []
+    rows = _grid(btns, 1) if btns else []
     if not rows:
         await q.edit_message_text(t(lang, "empty"), reply_markup=InlineKeyboardMarkup([[InlineKeyboardButton(t(lang, "btn_back_menu"), callback_data="menu")]]))
         return
