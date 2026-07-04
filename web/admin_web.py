@@ -28,10 +28,10 @@ import json
 import os
 import tempfile
 import threading
-from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
-from urllib.parse import parse_qs, urlparse, urlencode
+from http.server import BaseHTTPRequestHandler, HTTPServer
+from urllib.parse import parse_qs, urlparse
 
-BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+BASE_DIR = os.getenv("DATA_DIR", os.path.dirname(os.path.abspath(__file__)))
 SETTINGS_FILE = os.getenv("SETTINGS_FILE", os.path.join(BASE_DIR, "settings.json"))
 PASS = os.getenv("ADMIN_WEB_PASSWORD", "jomok123")
 TOKEN = os.getenv("WEB_TOKEN", "ok")
