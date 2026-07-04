@@ -716,6 +716,15 @@ async def universal_handler(update, context):
     text = update.message.text
     text_clean = text.replace('\ufe0f', '')  # Remove variation selector
     
+    # Check broadcast mode (sebelum reply keyboard check)
+    if context.user_data.get("bcast_mode"):
+        # Kalo admin tap reply keyboard apapun selain mode broadcast, matikan
+        is_reply_key = text_clean.startswith("🛍") or text_clean.startswith("📦") or text_clean.startswith("👑") or text_clean.startswith("🛒") or text_clean.startswith("🌐")
+        if is_reply_key:
+            context.user_data.pop("bcast_mode", None)
+            await update.message.reply_text("❌ Broadcast dimatikan.")
+            # Lanjut ke handler biasa di bawah
+    
     # Check reply keyboard first (for ALL users)
     if text_clean.startswith("🛍") or text == "Menu":
         u = update.effective_user
