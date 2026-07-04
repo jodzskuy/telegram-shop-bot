@@ -900,6 +900,41 @@ async def broadcast_cmd(update, context):
     await status_msg.edit_text(f"✅ Broadcast selesai!\n\n📨 Terkirim: {sent}\n❌ Gagal: {failed}\n👥 Total: {total}")
 
 
+async def photo_handler(update, context):
+    """Handle photo messages - check broadcast mode first"""
+    uid = update.effective_user.id
+    if uid != ADMIN_ID:
+        return  # Bukan admin, skip
+    
+    # Broadcast mode aktif?
+    if not context.user_data.get("bcast_mode"):
+        return  # Bukan mode broadcast, skip (biar proof_conv handle)
+    
+    # Broadcast foto + caption
+    caption = update.message.caption or ""
+    photo_file_id = update.message.photo[-1].file_id
+    users_data = storage._read_users()
+    user_ids = [int(u) for u in users_data.keys()]
+    total = len(user_ids)
+    sent = 0
+    failed = 0
+    status_msg = await update.message.reply_text(f"📢 Mengirim broadcast foto ke {total} user...")
+    for target_uid in user_ids:
+        if target_uid == uid:
+            continue
+        try:
+            if caption:
+                await context.bot.send_photo(target_uid, photo_file_id, caption=caption)
+            else:
+                await context.bot.send_photo(target_uid, photo_file_id)
+            sent += 1
+        except:
+            failed += 1
+        import asyncio
+        await asyncio.sleep(0.05)
+    await status_msg.edit_text(f"✅ Broadcast foto selesai!\n\n📨 Terkirim: {sent}\n❌ Gagal: {failed}\n👥 Total: {total}")
+
+
 async def sos_start(update, context):
     lang = lang_of(update)
     s = storage.get_settings()
@@ -1117,6 +1152,7 @@ def build_app():
     app.add_handler(CommandHandler("broadcast", broadcast_cmd))
     app.add_handler(CallbackQueryHandler(router))
     app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, universal_handler))
+    app.add_handler(MessageHandler(filters.PHOTO, photo_handler))
     return app
 
 
