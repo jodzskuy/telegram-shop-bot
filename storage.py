@@ -7,10 +7,35 @@ from __future__ import annotations
 import json
 import os
 import threading
+import shutil
+from datetime import datetime, timezone
 from typing import List, Optional
 
-DATA_FILE = os.path.join(os.path.dirname(os.path.abspath(__file__)), "data.json")
+BASE_DIR = os.getenv("DATA_DIR", os.path.dirname(os.path.abspath(__file__)))
+DATA_FILE = os.path.join(BASE_DIR, "data.json")
+ORDERS_FILE = os.path.join(BASE_DIR, "orders.json")
+SETTINGS_FILE = os.path.join(BASE_DIR, "settings.json")
+USERS_FILE = os.path.join(BASE_DIR, "users.json")
+BACKUP_DIR = os.path.join(BASE_DIR, "backups")
+MAX_BACKUPS = 50
 _lock = threading.Lock()
+
+def _auto_backup(filepath: str) -> None:
+    """Auto backup file sebelum ditimpa, max 50 backup per file."""
+    if not os.path.exists(filepath):
+        return
+    try:
+        os.makedirs(BACKUP_DIR, exist_ok=True)
+        basename = os.path.basename(filepath)
+        ts = datetime.now(timezone.utc).strftime("%Y%m%d_%H%M%S")
+        dst = os.path.join(BACKUP_DIR, f"{ts}_{basename}")
+        shutil.copy2(filepath, dst)
+        # Hapus backup lama (MAX per file type)
+        backups = sorted([f for f in os.listdir(BACKUP_DIR) if f.endswith(f"_{basename}")])
+        while len(backups) > MAX_BACKUPS:
+            os.remove(os.path.join(BACKUP_DIR, backups.pop(0)))
+    except Exception:
+        pass  # Backup failure jangan sampai ngebreak operasi utama
 
 _SEED = {
     "products": [
@@ -67,6 +92,7 @@ def _read() -> dict:
 
 
 def _write(data: dict) -> None:
+    _auto_backup(DATA_FILE)
     with open(DATA_FILE, "w", encoding="utf-8") as f:
         json.dump(data, f, ensure_ascii=False, indent=2)
 
@@ -155,9 +181,8 @@ def delete_product(product_id: int) -> bool:
 
 
 # ------------------------------------------------------------------- pesanan
-from datetime import datetime, timezone  # noqa: E402
 
-ORDERS_FILE = os.path.join(os.path.dirname(os.path.abspath(__file__)), "orders.json")
+ORDERS_FILE = os.path.join(BASE_DIR, "orders.json")
 ORDER_STATUSES = ["Baru", "Diproses", "Selesai", "Batal"]
 
 
@@ -169,6 +194,7 @@ def _read_orders() -> dict:
 
 
 def _write_orders(data: dict) -> None:
+    _auto_backup(ORDERS_FILE)
     with open(ORDERS_FILE, "w", encoding="utf-8") as f:
         json.dump(data, f, ensure_ascii=False, indent=2)
 
@@ -256,7 +282,7 @@ def order_counts() -> dict:
 
 
 # ------------------------------------------------------------- pengaturan bot
-SETTINGS_FILE = os.path.join(os.path.dirname(os.path.abspath(__file__)), "settings.json")
+SETTINGS_FILE = os.path.join(BASE_DIR, "settings.json")
 
 
 def _default_settings():
@@ -324,13 +350,14 @@ def update_settings(new):
         for k in SETTINGS_KEYS:
             if k in new and new[k] is not None:
                 cur[k] = new[k]
+        _auto_backup(SETTINGS_FILE)
         with open(SETTINGS_FILE, "w", encoding="utf-8") as f:
             json.dump(cur, f, ensure_ascii=False, indent=2)
     return cur
 
 
 # ------------------------------------------------------------- bahasa pengguna
-USERS_FILE = os.path.join(os.path.dirname(os.path.abspath(__file__)), "users.json")
+USERS_FILE = os.path.join(BASE_DIR, "users.json")
 
 
 def _read_users() -> dict:
@@ -344,6 +371,7 @@ def _read_users() -> dict:
 
 
 def _write_users(data: dict) -> None:
+    _auto_backup(USERS_FILE)
     with open(USERS_FILE, "w", encoding="utf-8") as f:
         json.dump(data, f, ensure_ascii=False, indent=2)
 

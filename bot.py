@@ -20,7 +20,7 @@ import time
 from collections import defaultdict
 
 from dotenv import load_dotenv
-from telegram import InlineKeyboardButton, InlineKeyboardMarkup, Update
+from telegram import InlineKeyboardButton, InlineKeyboardMarkup, Update, ReplyKeyboardMarkup, KeyboardButton, MenuButtonCommands
 from telegram.ext import (Application, CallbackQueryHandler, CommandHandler,
                           ContextTypes, ConversationHandler, MessageHandler,
                           filters)
@@ -174,6 +174,19 @@ def menu_keyboard(update, lang):
         btns.append(InlineKeyboardButton(t(lang, "btn_admin"), callback_data="admin"))
     return InlineKeyboardMarkup(_grid(btns, 2))
 
+def reply_main_keyboard(uid=None):
+    """Reply keyboard (bawah layar) - berbeda untuk admin vs customer"""
+    is_admin = uid and str(uid) == os.getenv("ADMIN_ID", "0")
+    if is_admin:
+        return ReplyKeyboardMarkup(
+            [["🛍️ Menu", "📦 Pesanan"], ["👑 Admin", "📢 Broadcast"]],
+            resize_keyboard=True
+        )
+    return ReplyKeyboardMarkup(
+        [["🛍️ Menu", "🛒 Keranjang"], ["📦 Pesanan Saya", "🌐 Bahasa"]],
+        resize_keyboard=True
+    )
+
 
 def lang_keyboard():
     return InlineKeyboardMarkup([
@@ -185,6 +198,9 @@ def lang_keyboard():
 def admin_keyboard(lang):
     return InlineKeyboardMarkup([
         [InlineKeyboardButton(t(lang, "btn_add_product"), callback_data="ap_add")],
+        [InlineKeyboardButton("✏️ Edit Produk", callback_data="edit_product_menu")],
+        [InlineKeyboardButton("📋 Pesanan", callback_data="order_list")],
+        [InlineKeyboardButton("📢 Broadcast", callback_data="bcast_info")],
         [InlineKeyboardButton(t(lang, "btn_stock"), callback_data="stock_menu")],
         [InlineKeyboardButton(t(lang, "btn_del_product"), callback_data="del_menu")],
         [InlineKeyboardButton(t(lang, "btn_catalog"), callback_data="catalog")],
@@ -245,9 +261,11 @@ async def start(update, context):
             reply_markup=lang_keyboard(),
             parse_mode="HTML",
         )
+        await update.message.reply_text("👇", reply_markup=reply_main_keyboard(update.effective_user.id))
         return
     lang = storage.get_user_lang(uid)
     await update.message.reply_text(home_text(update, lang), reply_markup=menu_keyboard(update, lang), parse_mode="HTML")
+    await update.message.reply_text("👇", reply_markup=reply_main_keyboard(update.effective_user.id))
 
 
 async def menu_cmd(update, context):
@@ -255,6 +273,7 @@ async def menu_cmd(update, context):
     if not await check_sub_and_block(update, context):
         return ConversationHandler.END
     await update.message.reply_text(home_text(update, lang), reply_markup=menu_keyboard(update, lang), parse_mode="HTML")
+    await update.message.reply_text("👇", reply_markup=reply_main_keyboard(update.effective_user.id))
     return ConversationHandler.END
 
 
@@ -571,28 +590,268 @@ async def router(update, context):
             context.user_data["edit_stock_msg_id"] = q.message.message_id
             p = storage.get_product(pid)
             await q.edit_message_text(f"Stok saat ini *{p['name']}*: {p.get('stock',0)}\n\nKetik jumlah stok baru (angka):", parse_mode="Markdown")
-            return  # JANGAN return state, handle via flag di user_data
+            return
+    
+    # ===================== EDIT PRODUK =====================
+    elif data == "edit_product_menu":
+        if is_admin(update):
+            products = storage.list_products()
+            if not products:
+                await q.edit_message_text("Belum ada produk.", reply_markup=InlineKeyboardMarkup([[InlineKeyboardButton("⬅️ Kembali", callback_data="admin")]]))
+                return
+            rows = []
+            for p in products:
+                rows.append([InlineKeyboardButton(f"✏️ {p['name']} - {_fmt_int(p['price'])}", callback_data=f"edit_prod:{p['id']}")])
+            rows.append([InlineKeyboardButton("⬅️ Kembali", callback_data="admin")])
+            await q.edit_message_text("📦 Pilih produk yang mau diedit:", reply_markup=InlineKeyboardMarkup(rows))
+    
+    elif data.startswith("edit_prod:"):
+        if is_admin(update):
+            pid = int(data.split(":")[1])
+            p = storage.get_product(pid)
+            if not p:
+                await q.answer("Produk tidak ditemukan!")
+                return
+            stock_text = str(p.get('stock', 0)) if p.get('stock', 0) >= 0 else "Tak terbatas"
+            text = f"📦 *{p['name']}*\n📂 {p.get('category','')}\n💰 {_fmt_int(p['price'])}\n📊 Stok: {stock_text}\n📝 {p.get('description','-')}\n\nPilih yang mau diubah:"
+            rows = [
+                [InlineKeyboardButton("💰 Ubah Harga", callback_data=f"eprice:{pid}")],
+                [InlineKeyboardButton("📊 Ubah Stok", callback_data=f"estock:{pid}")],
+                [InlineKeyboardButton("✏️ Ubah Nama", callback_data=f"ename:{pid}")],
+                [InlineKeyboardButton("📝 Ubah Deskripsi", callback_data=f"edesc:{pid}")],
+                [InlineKeyboardButton("⬅️ Kembali", callback_data="edit_product_menu")],
+            ]
+            await q.edit_message_text(text, reply_markup=InlineKeyboardMarkup(rows), parse_mode="HTML")
+    
+    elif data.startswith("eprice:"):
+        if is_admin(update):
+            pid = int(data.split(":")[1])
+            context.user_data["edit_field"] = "price"
+            context.user_data["edit_pid"] = pid
+            await q.edit_message_text("💰 Ketik harga baru (angka):\nContoh: 50000")
+    
+    elif data.startswith("estock:"):
+        if is_admin(update):
+            pid = int(data.split(":")[1])
+            context.user_data["edit_field"] = "stock"
+            context.user_data["edit_pid"] = pid
+            await q.edit_message_text("📊 Ketik jumlah stok baru (angka):")
+    
+    elif data.startswith("ename:"):
+        if is_admin(update):
+            pid = int(data.split(":")[1])
+            context.user_data["edit_field"] = "name"
+            context.user_data["edit_pid"] = pid
+            await q.edit_message_text("✏️ Ketik nama baru:")
+    
+    elif data.startswith("edesc:"):
+        if is_admin(update):
+            pid = int(data.split(":")[1])
+            context.user_data["edit_field"] = "desc"
+            context.user_data["edit_pid"] = pid
+            await q.edit_message_text("📝 Ketik deskripsi baru:")
+    
+    # ===================== PESANAN =====================
+    elif data == "order_list":
+        if is_admin(update):
+            orders = storage.list_orders()
+            pending = [o for o in orders if o.get("status") not in ("Selesai", "Batal")]
+            if not pending:
+                await q.edit_message_text("✅ Tidak ada pesanan antri.", reply_markup=InlineKeyboardMarkup([[InlineKeyboardButton("⬅️ Kembali", callback_data="admin")]]))
+                return
+            text = "📋 *Daftar Pesanan Antri:*\n\n"
+            rows = []
+            for o in pending[:10]:
+                icon = {"Baru": "🆕", "Diproses": "🔄"}.get(o.get("status",""), "📦")
+                rows.append([InlineKeyboardButton(f"{icon} #{o['id']} {o.get('customer_name','?')}", callback_data=f"order_detail:{o['id']}")])
+            rows.append([InlineKeyboardButton("⬅️ Kembali", callback_data="admin")])
+            await q.edit_message_text(text, reply_markup=InlineKeyboardMarkup(rows), parse_mode="Markdown")
+    
+    elif data.startswith("order_detail:"):
+        if is_admin(update):
+            oid = int(data.split(":")[1])
+            o = storage.get_order(oid)
+            if not o:
+                await q.answer("Pesanan tidak ditemukan!", show_alert=True)
+                return
+            items_text = "\n".join([f"• {i.get('name','?')} x{i.get('qty',1)} - {_fmt_int(i.get('price',0)*i.get('qty',1))}" for i in o.get("items", [])])
+            text = f"📦 *Pesanan #{oid}*\n📌 Status: {o.get('status','?')}\n\n👤 {o.get('customer_name','?')}\n📞 {o.get('phone','-')}\n📍 {o.get('address','-')}\n\n{items_text}\n💰 *Total: {_fmt_int(o.get('total',0))}*\n\n📝 {o.get('proof_text','')}"
+            rows = [
+                [InlineKeyboardButton("📤 Kirim Detail ke Customer", callback_data=f"send_detail:{oid}")],
+                [InlineKeyboardButton("⬅️ Kembali", callback_data="order_list")],
+            ]
+            await q.edit_message_text(text, reply_markup=InlineKeyboardMarkup(rows), parse_mode="Markdown")
+    
+    elif data.startswith("send_detail:"):
+        if is_admin(update):
+            oid = int(data.split(":")[1])
+            context.user_data["send_detail_oid"] = oid
+            await q.edit_message_text(
+                f"✍️ Kirim detail produk untuk pesanan #{oid}\n\nKetik detail yang akan diterima pembeli (mis. akun, kode, lisensi, link, instruksi).\nPesan Anda akan diteruskan ke pembeli.",
+                reply_markup=InlineKeyboardMarkup([[InlineKeyboardButton("❌ Batal", callback_data="order_list")]])
+            )
+    
+    # ===================== BROADCAST =====================
+    elif data == "bcast_info":
+        if is_admin(update):
+            context.user_data["bcast_mode"] = True
+            await q.edit_message_text(
+                "📢 Broadcast Aktif\n\nSilahkan kirim pesan",
+                reply_markup=InlineKeyboardMarkup([[InlineKeyboardButton("❌ Matikan", callback_data="bcast_off")]])
+            )
+    
+    elif data == "bcast_off":
+        if is_admin(update):
+            context.user_data.pop("bcast_mode", None)
+            lang = lang_of(update)
+            await q.edit_message_text("❌ Broadcast dimatikan.", reply_markup=admin_keyboard(lang))
 
 
 # --------------------------------------------------------------- SOS
 
 
-async def stock_message_handler(update, context):
-    """Handle stock edit input — triggered when edit_stock_pid flag is set."""
+async def universal_handler(update, context):
+    """Universal handler for all text messages - dispatches to correct function"""
+    uid = update.effective_user.id
+    text = update.message.text
+    text_clean = text.replace('\ufe0f', '')  # Remove variation selector
+    
+    # Check reply keyboard first (for ALL users)
+    if text_clean.startswith("🛍") or text == "Menu":
+        u = update.effective_user
+        storage.register_user(u.id, username=u.username, name=u.full_name)
+        lang = storage.get_user_lang(u.id) if storage.is_lang_set(u.id) else "en"
+        await update.message.reply_text(home_text(update, lang), reply_markup=menu_keyboard(update, lang), parse_mode="HTML")
+        return
+    elif text_clean.startswith("🛒") or text == "Keranjang":
+        cart = get_cart(context)
+        lang = storage.get_user_lang(uid) if storage.is_lang_set(uid) else "en"
+        if not cart:
+            await update.message.reply_text("🛒 Keranjang kosong.\n\n📍 Klik Menu → pilih produk → tambah ke keranjang")
+        else:
+            await update.message.reply_text(cart_summary(cart, lang))
+        return
+    elif text_clean.startswith("📦") or text in ("Pesanan Saya", "Pesanan"):
+        if uid == int(os.getenv("ADMIN_ID", "0")) and "Saya" not in text:
+            # Admin: langsung buka daftar pesanan
+            all_orders = storage.list_orders()
+            pending = [o for o in all_orders if o.get("status") in ("Pending", "Diproses")]
+            lang = storage.get_user_lang(uid) if storage.is_lang_set(uid) else "en"
+            if not pending:
+                await update.message.reply_text("📋 Tidak ada pesanan pending.")
+            else:
+                rows = []
+                for o in pending:
+                    name = o.get("customer_name", f"Order #{o.get('id','?')}")
+                    total = _fmt_int(o.get("total", 0))
+                    rows.append([InlineKeyboardButton(f"#{o['id']} {name} - {total}", callback_data=f"order_detail:{o['id']}")])
+                rows.append([InlineKeyboardButton("⬅️ Kembali", callback_data="admin")])
+                await update.message.reply_text("📋 Daftar Pesanan:", reply_markup=InlineKeyboardMarkup(rows))
+        else:
+            # Customer: arahkan ke /orders
+            await update.message.reply_text("📍 Kirim /orders untuk liat pesanan kamu")
+        return
+    elif text_clean.startswith("🌐") or text == "Bahasa":
+        lang = storage.get_user_lang(uid) if storage.is_lang_set(uid) else "en"
+        await update.message.reply_text(t(lang, "choose_lang"), reply_markup=lang_keyboard())
+        return
+    elif text_clean.startswith("👑") or text == "Admin":
+        if uid == int(os.getenv("ADMIN_ID", "0")):
+            lang = storage.get_user_lang(uid) if storage.is_lang_set(uid) else "en"
+            await update.message.reply_text("👑 Panel Admin", reply_markup=admin_keyboard(lang))
+        return
+    elif text_clean.startswith("📢") or text == "Broadcast":
+        if uid == int(os.getenv("ADMIN_ID", "0")):
+            context.user_data["bcast_mode"] = True
+            await update.message.reply_text("📢 Broadcast Aktif\n\nKirim pesan yang ingin di-broadcast, atau ketik /cancel untuk batal.")
+        return
+    
+    # Admin-only checks
+    if uid != int(os.getenv("ADMIN_ID", "0")):
+        return  # Bukan admin, biarin ConversationHandler yg proses
+    
+    # Check send detail mode
+    send_oid = context.user_data.pop("send_detail_oid", None)
+    if send_oid:
+        o = storage.get_order(send_oid)
+        if o:
+            cust_uid = o.get("telegram_id")
+            if cust_uid:
+                items_text = "\n".join([f"• {i.get('name','?')} x{i.get('qty',1)}" for i in o.get("items", [])])
+                msg = f"📦 DETAIL PESANAN #{send_oid}\n\n{items_text}\n━━━━━━━━━━━\n💰 Total: {_fmt_int(o.get('total',0))}\n\n{text}"
+                try:
+                    await context.bot.send_message(cust_uid, msg)
+                    storage.update_order_status(send_oid, "Selesai")
+                    await update.message.reply_text(f"✅ Detail order #{send_oid} sudah dikirim ke customer! Pesanan ditandai Selesai.")
+                except Exception as e:
+                    await update.message.reply_text(f"❌ Gagal kirim: {e}")
+            else:
+                await update.message.reply_text("❌ Customer tidak punya Telegram ID!")
+        return
+    
+    # Check broadcast mode
+    if context.user_data.get("bcast_mode"):
+        users_data = storage._read_users()
+        user_ids = [int(u) for u in users_data.keys()]
+        total = len(user_ids)
+        sent = 0
+        failed = 0
+        status_msg = await update.message.reply_text(f"📢 Mengirim broadcast ke {total} user...")
+        for target_uid in user_ids:
+            if target_uid == uid:
+                continue
+            try:
+                await context.bot.send_message(target_uid, text)
+                sent += 1
+            except:
+                failed += 1
+            import asyncio
+            await asyncio.sleep(0.05)
+        await status_msg.edit_text(f"✅ Broadcast selesai!\n\n📨 Terkirim: {sent}\n❌ Gagal: {failed}\n👥 Total: {total}")
+        return
+    
+    # Check edit product field
+    edit_field = context.user_data.pop("edit_field", None)
+    if edit_field:
+        pid = context.user_data.pop("edit_pid", None)
+        if not pid:
+            return
+        if edit_field == "price":
+            digits = "".join(c for c in text if c.isdigit())
+            if not digits:
+                await update.message.reply_text("Masukkan angka saja (harga).")
+                context.user_data["edit_field"] = "price"
+                context.user_data["edit_pid"] = pid
+                return
+            p = storage.get_product(pid)
+            storage.update_product(pid, {"price": int(digits)})
+            await update.message.reply_text(f"💰 Harga {p['name']} diubah jadi {_fmt_int(int(digits))}!")
+        elif edit_field == "stock":
+            digits = "".join(c for c in text if c.isdigit())
+            if not digits:
+                await update.message.reply_text("Masukkan angka saja (stok).")
+                context.user_data["edit_field"] = "stock"
+                context.user_data["edit_pid"] = pid
+                return
+            p = storage.get_product(pid)
+            storage.update_product(pid, {"stock": int(digits)})
+            await update.message.reply_text(f"📊 Stok {p['name']} diubah jadi {int(digits)}!")
+        elif edit_field == "name":
+            if text.strip():
+                storage.update_product(pid, {"name": text.strip()})
+                await update.message.reply_text(f"✏️ Nama produk diubah jadi *{text.strip()}*!", parse_mode="Markdown")
+        elif edit_field == "desc":
+            storage.update_product(pid, {"description": text.strip()})
+            await update.message.reply_text(f"📝 Deskripsi produk diupdate!")
+        return
+    
+    # Original stock edit
     pid = context.user_data.pop("edit_stock_pid", None)
     if not pid:
-        return  # not in stock mode, skip
-    if update.callback_query:
-        await update.callback_query.answer()
-    uid = update.effective_user.id
-    if uid != int(os.getenv("ADMIN_ID", "0")):
-        await update.message.reply_text("Khusus admin.")
         return
-    lang = lang_of(update)
-    digits = "".join(c for c in update.message.text if c.isdigit())
+    digits = "".join(c for c in text if c.isdigit())
     if not digits:
         await update.message.reply_text("Masukkan angka saja (jumlah stok).")
-        # reset flag
         context.user_data["edit_stock_pid"] = pid
         return
     stok_baru = int(digits)
@@ -603,6 +862,33 @@ async def stock_message_handler(update, context):
     else:
         await update.message.reply_text("Produk tidak ditemukan.")
     context.user_data.pop("edit_stock_msg_id", None)
+
+
+async def broadcast_cmd(update, context):
+    """Broadcast text via /broadcast <pesan>"""
+    uid = update.effective_user.id
+    if uid != ADMIN_ID:
+        return
+    msg = ' '.join(context.args) if context.args else ''
+    if not msg:
+        await update.message.reply_text("📢 Broadcast\n\nKirim: /broadcast <pesan>")
+        return
+    users_data = storage._read_users()
+    user_ids = [int(u) for u in users_data.keys()]
+    total = len(user_ids)
+    sent = failed = 0
+    status_msg = await update.message.reply_text(f"📢 Mengirim broadcast ke {total} user...")
+    for target_uid in user_ids:
+        if target_uid == uid:
+            continue
+        try:
+            await context.bot.send_message(target_uid, msg)
+            sent += 1
+        except:
+            failed += 1
+        import asyncio
+        await asyncio.sleep(0.05)
+    await status_msg.edit_text(f"✅ Broadcast selesai!\n\n📨 Terkirim: {sent}\n❌ Gagal: {failed}\n👥 Total: {total}")
 
 
 async def sos_start(update, context):
@@ -815,19 +1101,25 @@ def build_app():
     app.add_handler(proof_conv)
     app.add_handler(fulfill_conv)
     app.add_handler(addproduct_conv)
-    app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, stock_message_handler))
     app.add_handler(CommandHandler("start", start))
     app.add_handler(CommandHandler("menu", menu_cmd))
     app.add_handler(CommandHandler("language", language_cmd))
     app.add_handler(CommandHandler("admin", admin_cmd))
+    app.add_handler(CommandHandler("broadcast", broadcast_cmd))
     app.add_handler(CallbackQueryHandler(router))
+    app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, universal_handler))
     return app
 
 
 def main():
     if not BOT_TOKEN:
         raise SystemExit("BOT_TOKEN belum diisi. Salin .env.example ke .env lalu isi token.")
-    build_app().run_polling()
+    app = build_app()
+    # Set menu button (tombol Menu di samping kolom chat)
+    async def setup_menu(app):
+        await app.bot.set_chat_menu_button(menu_button=MenuButtonCommands())
+    app.post_init = setup_menu
+    app.run_polling()
 
 
 if __name__ == "__main__":
