@@ -28,7 +28,7 @@ import json
 import os
 import tempfile
 import threading
-from http.server import BaseHTTPRequestHandler, HTTPServer
+from http.server import BaseHTTPRequestHandler, HTTPServer, ThreadingHTTPServer
 from urllib.parse import parse_qs, urlparse
 
 BASE_DIR = os.getenv("DATA_DIR", os.path.dirname(os.path.abspath(__file__)))
